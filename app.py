@@ -174,11 +174,6 @@ def inject_styles() -> None:
             font-size: 0.95rem;
         }
 
-        .control-note {
-            color: #94a3b8;
-            font-size: 0.92rem;
-            margin-top: 0.3rem;
-        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -702,24 +697,15 @@ def render_main_tab() -> None:
         )
 
     n_dependent_vars = control_columns[3].slider(
-        "Probar múltiples variables dependientes",
-        min_value=2,
+        "Cantidad de variables dependientes",
+        min_value=1,
         max_value=5,
-        value=3,
+        value=1,
         step=1,
-        disabled=not st.session_state.get("main_multiple_variables", False),
         key="main_n_dependent_vars",
     )
-    multiple_variables = control_columns[3].checkbox(
-        "Activar análisis multivariable",
-        value=False,
-        key="main_multiple_variables",
-    )
+    multiple_variables = n_dependent_vars > 1
     if multiple_variables:
-        control_columns[3].markdown(
-            f'<div class="control-note">Número de variables: {n_dependent_vars}</div>',
-            unsafe_allow_html=True,
-        )
         st.caption(
             "Variables incluidas: " + ", ".join(DEPENDENT_VARIABLES[:n_dependent_vars])
         )
