@@ -17,34 +17,28 @@ conditionalPanel(
             div(
                 style = "text-align: center; padding: 50px;",
                 h4("??Comienza el experimento!", style = "color: #999;"),
-                p("Haz click en 'Conseguir Muestra' para probar TralaleroTralaLex")
+                p("Haz click en 'Conseguir Muestra' para probar WarNicky")
             )
         )
     )
 )
 
 dependent_variables <- list(
-    "Probabilidad de resolver Sudoku",
-    "Prob. Resolver Crucigrama de letras",
-    "Capacidad de recordar nombres raros",
-    "Habilidad para encontrar llaves perdidas",
-    "Velocidad para resolver laberintos",
-    "Precisi??n en recordar cumplea??os",
-    "Eficiencia organizando calcetines",
-    "Rapidez contando ovejas para dormir",
-    "Destreza armando muebles de IKEA",
-    "Intuici??n para adivinar contrase??as"
+    "Habilidad dominando el balón",
+    "Probabilidad de completar circuitos con balones",
+    "Probabilidad de ganar rey de la cancha",
+    "Probabilidad de meter goles desde fuera del área"
 )
 
 age_groups <- list(
     "Todos" = "todos",
-    "J??venes (20-40)" = "jovenes",
-    "Adultos (40-60)" = "adultos",
-    "Veteranos (+60)" = "veteranos"
+    "Tercero" = "jovenes",
+    "Cuarto" = "adultos",
+    "Quinto" = "veteranos"
 )
 
 ui <- dashboardPage(
-    dashboardHeader(title = "???? TralaleroTralaLex: ??Milagro Cognitivo o Azar? ????"),
+    dashboardHeader(title = "???? WarNicky: ??Milagro o Azar? ????"),
     dashboardSidebar(
         sidebarMenu(
             menuItem("???? Experimento Principal", tabName = "main", icon = icon("flask")),
@@ -103,10 +97,10 @@ ui <- dashboardPage(
                         width = 12, collapsible = TRUE,
                         div(
                             style = "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px;",
-                            h3("???? TralaleroTralaLex: La P??ldora Cognitiva del Futuro", style = "text-align: center;"),
+                            h3("???? WarNicky: La P??ldora del Futuro", style = "text-align: center;"),
                             p(
                                 "??Bienvenido al laboratorio! Est??s investigando la efectividad de ",
-                                strong("TralaleroTralaLex"), ", una nueva droga que promete mejorar dram??ticamente las capacidades cognitivas."
+                                strong("WarNicky"), ", una nueva droga que promete mejorar dram??ticamente las capacidades futbolísticas"
                             ),
                             p("???? ", strong("Tu misi??n:"), " Determinar si esta droga realmente funciona o si los efectos 'significativos' son solo producto del azar."),
                             p("?????? ", strong("El experimento:"), " Participantes reciben la droga (tratamiento) o placebo (control), y medimos su desempe??o en varias tareas cognitivas.")
@@ -120,7 +114,7 @@ ui <- dashboardPage(
                         fluidRow(
                             column(
                                 3,
-                                h5("???? Efecto Verdadero de TralaleroTralaLex"),
+                                h5("???? Efecto Verdadero de WarNicky"),
                                 sliderInput("true_effect", "",
                                     min = 0, max = 1, value = 0, step = 0.1
                                 ),
@@ -136,8 +130,8 @@ ui <- dashboardPage(
                             ),
                             column(
                                 3,
-                                h5("???? An??lisis por Grupos Etarios"),
-                                checkboxInput("analyze_by_age", "Dividir por grupos de edad", value = FALSE),
+                                h5("???? An??lisis por Generaciones"),
+                                checkboxInput("analyze_by_age", "Dividir por generaciones", value = FALSE),
                                 conditionalPanel(
                                     condition = "input.analyze_by_age",
                                     div(
@@ -245,7 +239,7 @@ ui <- dashboardPage(
                 tabName = "replication",
                 fluidRow(
                     box(
-                        title = "???? Estudio de Replicaci??n de TralaleroTralaLex", status = "primary",
+                        title = "???? Estudio de Replicaci??n de WarNicky", status = "primary",
                         solidHeader = TRUE, width = 12,
                         fluidRow(
                             column(
@@ -440,7 +434,7 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$run_replication, {
-        withProgress(message = "Replicando estudios de TralaleroTralaLex...", value = 0, {
+        withProgress(message = "Replicando estudios de WarNicky...", value = 0, {
             n_reps <- input$n_replications
             replication_data <- data.frame()
 
@@ -507,11 +501,11 @@ server <- function(input, output, session) {
         } else if (input$multiple_variables) {
             "M??ltiples variables"
         } else if (input$analyze_by_age) {
-            "M??ltiples grupos etarios"
+            "M??ltiples generaciones"
         } else {
             "An??lisis simple"
         }
-        paste("????", analyses_text, "- Efecto real de TralaleroTralaLex:", input$true_effect)
+        paste("????", analyses_text, "- Efecto real de WarNicky:", input$true_effect)
     })
 
     output$total_tests <- renderText({
@@ -645,7 +639,7 @@ server <- function(input, output, session) {
             } else if (input$multiple_variables) {
                 paste(input$n_dependent_vars, "variables")
             } else if (input$analyze_by_age) {
-                "3 grupos etarios"
+                "3 generaciones"
             } else {
                 "An??lisis simple"
             }
@@ -737,7 +731,7 @@ server <- function(input, output, session) {
                 labels = c("0.001", "0.01", "0.05", "0.1", "0.5", "1.0")
             ) +
             labs(
-                title = "???? Todos los An??lisis de TralaleroTralaLex",
+                title = "???? Todos los An??lisis de WarNicky",
                 subtitle = "Cada punto = una prueba estad??stica (Variable ?? Grupo Etario)",
                 x = "???? N??mero de An??lisis", y = "???? P-valor (escala log)", size = "|T-Statistic|"
             ) +
@@ -827,7 +821,7 @@ server <- function(input, output, session) {
             caption_text <- paste0(
                 caption_text,
                 "L??nea azul: an??lisis con todos los datos. ",
-                "L??nea naranja discontinua: proporci??n de estudios donde al menos uno de los 3 subgrupos etarios es significativo."
+                "L??nea naranja discontinua: proporci??n de estudios donde al menos uno de las 3 generaciones es significativa."
             )
         } else {
             caption_text <- paste0(caption_text, "L??nea azul: an??lisis est??ndar con todos los datos.")
@@ -897,4 +891,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
-

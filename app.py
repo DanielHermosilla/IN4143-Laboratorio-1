@@ -10,16 +10,16 @@ from scipy.stats import norm, t as student_t
 
 
 DEPENDENT_VARIABLES = [
-    "Probabilidad de resolver Sudoku",
-    "Prob. Resolver Crucigrama de letras",
-    "Capacidad de recordar nombres raros",
-    "Habilidad para encontrar llaves perdidas",
-    "Velocidad para resolver laberintos",
-    "Precisión en recordar cumpleaños",
-    "Eficiencia organizando calcetines",
-    "Rapidez contando ovejas para dormir",
-    "Destreza armando muebles de IKEA",
-    "Intuición para adivinar contraseñas",
+    "Conteo de dominadas",
+    "Rendimiento en rey/reina de la cancha",
+    "Precisión de pase bajo presión",
+    "Éxito en duelos uno contra uno",
+    "Velocidad de transición defensa-ataque",
+    "Precisión de remate al arco",
+    "Lectura táctica en fase defensiva",
+    "Generación de ocasiones claras",
+    "Coordinación en presión alta",
+    "Rendimiento físico en el tramo final",
 ]
 
 MAIN_AGE_GROUPS = {
@@ -45,8 +45,8 @@ GROUP_ALPHA = {
 
 REPLICATION_MODES = {
     "Análisis estándar": "standard",
-    "Efectos heterogéneos por grupo etario": "age",
-    "Múltiples variables dependientes": "multiple_variables",
+    "Efectos heterogéneos por generación": "age",
+    "Distintas variables dependientes": "multiple_variables",
 }
 
 
@@ -348,7 +348,7 @@ def run_analysis(
             rows.append(
                 {
                     "Variable_Dependiente": statistics["variable"],
-                    "Grupo_Etario": statistics["group"],
+                    "Generación": statistics["group"],
                     "Beta": round(float(statistics["beta"]), 4),
                     "Error_Std": round(float(statistics["se_beta"]), 4),
                     "T_Statistic": round(float(statistics["t_statistic"]), 3),
@@ -427,11 +427,11 @@ def current_context_text(config: dict[str, object]) -> str:
     elif multiple_variables:
         analysis_label = "Múltiples variables"
     elif analyze_by_age:
-        analysis_label = "Múltiples grupos etarios"
+        analysis_label = "Múltiples generaciones"
     else:
         analysis_label = "Análisis simple"
 
-    return f"{analysis_label} | Efecto real de TralaleroTralaLex: {true_effect:.1f}"
+    return f"{analysis_label} | Efecto real de WarNicky: {true_effect:.1f}"
 
 
 def build_analysis_summary(results: pd.DataFrame) -> str:
@@ -439,10 +439,10 @@ def build_analysis_summary(results: pd.DataFrame) -> str:
         return ""
 
     n_variables = results["Variable_Dependiente"].nunique()
-    n_groups = results["Grupo_Etario"].nunique()
+    n_groups = results["Generación"].nunique()
     n_significant = int((results["P_Value"] < 0.05).sum())
     return (
-        f"Simulación actual: {n_variables} variables x {n_groups} grupos = "
+        f"Simulación actual: {n_variables} variables x {n_groups} generaciones = "
         f"{len(results)} análisis totales. {n_significant} con p < 0.05."
     )
 
@@ -458,17 +458,17 @@ def build_legend_html(results: pd.DataFrame, analyze_by_age: bool) -> str:
         return ""
 
     unique_rows = (
-        results[["Variable_Dependiente", "Grupo_Etario"]]
+        results[["Variable_Dependiente", "Generación"]]
         .drop_duplicates()
         .reset_index(drop=True)
     )
 
     items = []
     for _, row in unique_rows.iterrows():
-        label = f"{row['Variable_Dependiente']} - {row['Grupo_Etario']}"
+        label = f"{row['Variable_Dependiente']} - {row['Generación']}"
         color = plot_color(
             row["Variable_Dependiente"],
-            row["Grupo_Etario"],
+            row["Generación"],
             analyze_by_age,
         )
         items.append(
@@ -515,7 +515,7 @@ def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Fi
                 x=float(row["T_Statistic"]),
                 line_color=plot_color(
                     row["Variable_Dependiente"],
-                    row["Grupo_Etario"],
+                    row["Generación"],
                     analyze_by_age,
                 ),
                 line_width=2.5,
@@ -553,17 +553,20 @@ def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Fi
 def build_replication_caption(
     mode: str, n_dependent_vars: int, true_effect: float
 ) -> str:
-    prefix = "La línea azul muestra la tasa acumulada de estudios con p < 0.05 usando toda la muestra. "
+    prefix = (
+        "La línea azul muestra la tasa acumulada de estudios con p < 0.05 "
+        "usando la muestra completa y una variable dependiente. "
+    )
 
     if mode == "multiple_variables":
         suffix = (
             f"La línea verde muestra la proporción de estudios donde al menos una de las "
-            f"{n_dependent_vars} variables fue significativa."
+            f"{n_dependent_vars} variables dependientes fue significativa."
         )
     elif mode == "age":
         suffix = (
-            "La línea naranja muestra la proporción de estudios donde al menos uno de los "
-            "subgrupos etarios fue significativo."
+            "La línea naranja muestra la proporción de estudios donde al menos una de las "
+            "generaciones analizadas fue significativa."
         )
     else:
         suffix = "Este escenario corresponde al análisis estándar."
@@ -696,11 +699,11 @@ def render_main_tab() -> None:
         """
         <div class="main-intro">
           <div class="main-kicker">Laboratorio 1 · IN4143</div>
-          <h2>TralaleroTralaLex 💊</h2>
+          <h2>WarNicky: ¿Milagro futbolero o azar?</h2>
           <p>
-            Simula el experimento tratamiento vs. placebo y observa cómo cambian el p-valor
-            y el t-statistic al modificar el tamaño muestral, los grupos etarios y la cantidad
-            de variables dependientes.
+            Simula un experimento donde algunos participantes reciben WarNicky y otros placebo.
+            Observa cómo cambian el p-valor y el t-statistic al modificar el tamaño muestral,
+            dividir por generación y probar distintas variables de desempeño futbolero.
           </p>
         </div>
         """,
@@ -709,7 +712,7 @@ def render_main_tab() -> None:
 
     control_columns = st.columns(4)
     true_effect = control_columns[0].slider(
-        "Efecto verdadero de TralaleroTralaLex",
+        "Efecto verdadero de WarNicky",
         min_value=0.0,
         max_value=1.0,
         value=0.0,
@@ -719,7 +722,7 @@ def render_main_tab() -> None:
     control_columns[0].caption(
         "Sin efecto (placebo)"
         if true_effect == 0
-        else f"Mejora de {true_effect:.1f} puntos"
+        else f"Mejora de {true_effect:.1f} puntos con WarNicky"
     )
 
     sample_size = control_columns[1].slider(
@@ -733,15 +736,18 @@ def render_main_tab() -> None:
     control_columns[1].caption(f"{sample_size} participantes")
 
     n_age_groups = control_columns[2].slider(
-        "Grupos etarios",
+        "Dividir por generación",
         min_value=1,
         max_value=3,
         value=1,
-        step=1,
+        step=2,
         key="main_n_age_groups",
     )
-    age_group_labels = ["Todos", "Jóvenes · Adultos", "Jóvenes · Adultos · Veteranos"]
-    control_columns[2].caption(age_group_labels[n_age_groups - 1])
+    control_columns[2].caption(
+        "Muestra completa"
+        if n_age_groups == 1
+        else "3 generaciones: Jóvenes, Adultos y Veteranos"
+    )
     analyze_by_age = n_age_groups > 1
 
     n_dependent_vars = control_columns[3].slider(
@@ -886,8 +892,8 @@ def render_replication_tab() -> None:
             )
         )
         replication_true_effect = float(
-            st.number_input(
-                "Efecto real de la droga",
+        st.number_input(
+                "Efecto real de WarNicky",
                 min_value=0.0,
                 max_value=1.0,
                 value=0.0,
@@ -999,13 +1005,13 @@ def render_replication_tab() -> None:
 
 def main() -> None:
     st.set_page_config(
-        page_title="TralaleroTralaLex",
+        page_title="WarNicky",
         layout="wide",
     )
     inject_styles()
     initialize_state()
 
-    st.title("Simulador de Inferencia Causal")
+    st.title("WarNicky: Laboratorio de Inferencia Causal")
 
     experiment_tab, replication_tab = st.tabs(
         ["Experimento principal", "Replicación"],
