@@ -326,8 +326,12 @@ def run_analysis(
     analyze_by_age: bool,
     multiple_variables: bool,
     n_dependent_vars: int,
+    n_age_groups: int = 1,
 ) -> pd.DataFrame:
-    groups_to_analyze = MAIN_AGE_GROUPS if analyze_by_age else {"Todos": "todos"}
+    if analyze_by_age:
+        groups_to_analyze = dict(list(MAIN_AGE_GROUPS.items())[:n_age_groups])
+    else:
+        groups_to_analyze = {"Todos": "todos"}
     variables_to_analyze = range(1, n_dependent_vars + 1) if multiple_variables else [1]
 
     rows: list[dict[str, float | str | int]] = []
@@ -728,13 +732,17 @@ def render_main_tab() -> None:
     )
     control_columns[1].caption(f"{sample_size} participantes")
 
-    analyze_by_age = control_columns[2].checkbox(
-        "Dividir por grupos de edad", value=False, key="main_analyze_by_age"
+    n_age_groups = control_columns[2].slider(
+        "Grupos etarios",
+        min_value=1,
+        max_value=3,
+        value=1,
+        step=1,
+        key="main_n_age_groups",
     )
-    if analyze_by_age:
-        control_columns[2].caption(
-            "Se analizan jóvenes, adultos y veteranos por separado."
-        )
+    age_group_labels = ["Todos", "Jóvenes · Adultos", "Jóvenes · Adultos · Veteranos"]
+    control_columns[2].caption(age_group_labels[n_age_groups - 1])
+    analyze_by_age = n_age_groups > 1
 
     n_dependent_vars = control_columns[3].slider(
         "Cantidad de variables dependientes",
@@ -764,6 +772,7 @@ def render_main_tab() -> None:
             analyze_by_age=analyze_by_age,
             multiple_variables=multiple_variables,
             n_dependent_vars=n_dependent_vars,
+            n_age_groups=n_age_groups,
         )
         st.session_state.current_results_config = {
             "true_effect": true_effect,
@@ -771,6 +780,7 @@ def render_main_tab() -> None:
             "analyze_by_age": analyze_by_age,
             "multiple_variables": multiple_variables,
             "n_dependent_vars": n_dependent_vars,
+            "n_age_groups": n_age_groups,
         }
 
     if action_columns[1].button(
@@ -845,7 +855,6 @@ def render_main_tab() -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.markdown(build_analysis_summary(current_results))
         st.dataframe(
             style_results_dataframe(current_results),
             use_container_width=True,
@@ -998,10 +1007,6 @@ def main() -> None:
     initialize_state()
 
     st.title("Simulador de Inferencia Causal")
-    st.markdown(
-        '<p class="hint-text">Laboratorio 1.</p>',
-        unsafe_allow_html=True,
-    )
 
     experiment_tab, replication_tab = st.tabs(
         ["Experimento principal", "Replicación"],
