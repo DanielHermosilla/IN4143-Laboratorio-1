@@ -212,126 +212,6 @@ def inject_styles() -> None:
             font-size: 0.95rem;
         }
 
-        /* ── Hypothesis statement box ── */
-        .hypothesis-box {
-            background: rgba(15, 23, 42, 0.60);
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            border-radius: 16px;
-            padding: 1rem 1.25rem;
-            margin: 0.5rem 0 1.2rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .hyp-row {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        .hyp-label {
-            background: rgba(239, 68, 68, 0.15);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.25);
-            border-radius: 6px;
-            padding: 0.1rem 0.55rem;
-            font-size: 0.85rem;
-            font-weight: 700;
-            font-family: "Space Grotesk", sans-serif;
-            min-width: 2.4rem;
-            text-align: center;
-            flex-shrink: 0;
-        }
-        .hyp-label-alt {
-            background: rgba(59, 130, 246, 0.15);
-            color: #93c5fd;
-            border-color: rgba(59, 130, 246, 0.25);
-        }
-        .hyp-text { color: #cbd5e1; font-size: 0.95rem; }
-        .hyp-text strong { color: #f8fafc; }
-        .hyp-formula {
-            font-family: "IBM Plex Mono", "Courier New", monospace;
-            color: #94a3b8;
-            font-size: 0.88rem;
-            padding: 0.35rem 0.7rem;
-            background: rgba(0, 0, 0, 0.20);
-            border-radius: 8px;
-            margin-top: 0.2rem;
-            display: inline-block;
-            align-self: flex-start;
-        }
-
-        /* ── Control section label ── */
-        .control-section-label {
-            color: #60a5fa;
-            font-size: 0.72rem;
-            font-weight: 600;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            margin-bottom: 0.5rem;
-        }
-
-        /* ── Multiple-tests warning ── */
-        .tests-warning {
-            background: rgba(245, 158, 11, 0.10);
-            border: 1px solid rgba(245, 158, 11, 0.25);
-            border-radius: 10px;
-            color: #fcd34d;
-            font-size: 0.87rem;
-            padding: 0.5rem 0.75rem;
-            margin-top: 0.5rem;
-        }
-        .tests-warning strong { color: #fde68a; }
-
-        /* ── Verdict panels ── */
-        .verdict-reject, .verdict-fail {
-            display: flex;
-            align-items: center;
-            gap: 1.1rem;
-            border-radius: 16px;
-            padding: 1rem 1.25rem;
-            margin: 1.1rem 0 0.6rem;
-        }
-        .verdict-reject {
-            background: rgba(16, 185, 129, 0.10);
-            border: 1px solid rgba(16, 185, 129, 0.28);
-        }
-        .verdict-fail {
-            background: rgba(239, 68, 68, 0.09);
-            border: 1px solid rgba(239, 68, 68, 0.22);
-        }
-        .verdict-icon { font-size: 1.55rem; width: 2rem; text-align: center; flex-shrink: 0; }
-        .verdict-reject .verdict-icon { color: #34d399; }
-        .verdict-fail    .verdict-icon { color: #f87171; }
-        .verdict-body { flex: 1; min-width: 0; }
-        .verdict-title {
-            font-family: "Space Grotesk", sans-serif;
-            font-size: 1.08rem;
-            font-weight: 700;
-            color: #f8fafc;
-            line-height: 1.2;
-        }
-        .verdict-detail { font-size: 0.86rem; color: #94a3b8; margin-top: 0.2rem; }
-        .verdict-stats { display: flex; gap: 1.4rem; flex-shrink: 0; }
-        .verdict-stat  { display: flex; flex-direction: column; align-items: center; gap: 0.05rem; }
-        .vs-label {
-            font-size: 0.68rem; color: #64748b; font-weight: 600;
-            letter-spacing: 0.07em; text-transform: uppercase;
-        }
-        .vs-value {
-            font-family: "Space Grotesk", sans-serif;
-            font-size: 1.0rem; font-weight: 700; color: #e2e8f0;
-        }
-
-        /* ── Empty state ── */
-        .empty-state {
-            text-align: center; padding: 2.8rem 1rem; color: #475569;
-            border: 1px dashed rgba(148, 163, 184, 0.14);
-            border-radius: 16px; margin-top: 1rem;
-        }
-        .empty-icon { font-size: 2.2rem; display: block; margin-bottom: 0.6rem; }
-        .empty-state p { font-size: 0.96rem; margin: 0; color: #64748b; }
-        .empty-state strong { color: #94a3b8; }
-
         </style>
         """,
         unsafe_allow_html=True,
@@ -796,9 +676,7 @@ def style_results_dataframe(results: pd.DataFrame) -> pd.io.formats.style.Styler
 
     def highlight_significance(values: pd.Series) -> list[str]:
         return [
-            "background-color: rgba(16,185,129,0.18); color: #6ee7b7; font-weight: 700;"
-            if value < 0.05
-            else "color: #94a3b8;"
+            "background-color: #fde68a; font-weight: 700;" if value < 0.05 else ""
             for value in values
         ]
 
@@ -810,7 +688,6 @@ def style_results_dataframe(results: pd.DataFrame) -> pd.io.formats.style.Styler
 
 
 def render_main_tab() -> None:
-    # ── Hero ──────────────────────────────────────────────────────────────────
     st.markdown(
         """
         <div class="main-intro">
@@ -826,115 +703,60 @@ def render_main_tab() -> None:
         unsafe_allow_html=True,
     )
 
-    # ── Modelo e hipótesis ────────────────────────────────────────────────────
-    st.markdown(
-        """
-        <div class="hypothesis-box">
-          <div class="hyp-row">
-            <span class="hyp-label">H₀</span>
-            <span class="hyp-text">β = 0 &nbsp;—&nbsp; TralaleroTralaLex <strong>no tiene efecto</strong> sobre el desempeño cognitivo</span>
-          </div>
-          <div class="hyp-row">
-            <span class="hyp-label hyp-label-alt">H₁</span>
-            <span class="hyp-text">β ≠ 0 &nbsp;—&nbsp; TralaleroTralaLex <strong>sí tiene algún efecto</strong> (positivo o negativo)</span>
-          </div>
-          <div class="hyp-formula">Y<sub>i</sub> = α + β × Tratados<sub>i</sub> + ε<sub>i</sub> &nbsp;·&nbsp; Rechazamos H₀ si |t| > 1.96 &nbsp;(α = 5%)</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    control_columns = st.columns(4)
+    true_effect = control_columns[0].slider(
+        "Efecto verdadero de TralaleroTralaLex",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.0,
+        step=0.1,
+        key="main_true_effect",
+    )
+    control_columns[0].caption(
+        "Sin efecto (placebo)"
+        if true_effect == 0
+        else f"Mejora de {true_effect:.1f} puntos"
     )
 
-    # ── Controles ─────────────────────────────────────────────────────────────
-    left_col, right_col = st.columns([1, 1], gap="large")
+    sample_size = control_columns[1].slider(
+        "Tamaño de muestra inicial",
+        min_value=20,
+        max_value=500,
+        value=100,
+        step=10,
+        key="main_sample_size",
+    )
+    control_columns[1].caption(f"{sample_size} participantes")
 
-    with left_col:
-        st.markdown(
-            '<div class="control-section-label">Parámetros del experimento</div>',
-            unsafe_allow_html=True,
+    analyze_by_age = control_columns[2].checkbox(
+        "Dividir por grupos de edad", value=False, key="main_analyze_by_age"
+    )
+    if analyze_by_age:
+        control_columns[2].caption(
+            "Se analizan jóvenes, adultos y veteranos por separado."
         )
-        true_effect = st.slider(
-            "Efecto verdadero de la droga (β real)",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.0,
-            step=0.1,
-            key="main_true_effect",
-            help="0 = H₀ verdadera (sin efecto real). Valores mayores simulan una droga que sí funciona.",
-        )
+
+    n_dependent_vars = control_columns[3].slider(
+        "Cantidad de variables dependientes",
+        min_value=1,
+        max_value=5,
+        value=1,
+        step=1,
+        key="main_n_dependent_vars",
+    )
+    multiple_variables = n_dependent_vars > 1
+    if multiple_variables:
         st.caption(
-            "↳ Sin efecto — H₀ es verdadera"
-            if true_effect == 0
-            else f"↳ Efecto real de {true_effect:.1f} pts — H₀ es **falsa**"
+            "Variables incluidas: " + ", ".join(DEPENDENT_VARIABLES[:n_dependent_vars])
         )
 
-        sample_size = st.slider(
-            "Tamaño de muestra (n)",
-            min_value=20,
-            max_value=500,
-            value=100,
-            step=10,
-            key="main_sample_size",
-            help="Mayor n → mayor potencia estadística → más fácil detectar efectos reales pequeños.",
-        )
-        st.caption(
-            f"↳ {sample_size} participantes "
-            f"({sample_size // 2} tratamiento + {sample_size // 2} control)"
-        )
-
-    with right_col:
-        st.markdown(
-            '<div class="control-section-label">Opciones de análisis</div>',
-            unsafe_allow_html=True,
-        )
-        analyze_by_age = st.checkbox(
-            "Dividir por grupos de edad",
-            value=False,
-            key="main_analyze_by_age",
-            help="Genera 3 tests por variable (jóvenes, adultos, veteranos). Multiplica los falsos positivos potenciales.",
-        )
-        if analyze_by_age:
-            st.caption("↳ Jóvenes (20-40) · Adultos (40-60) · Veteranos (+60)")
-
-        n_dependent_vars = st.slider(
-            "Variables dependientes simultáneas",
-            min_value=1,
-            max_value=5,
-            value=1,
-            step=1,
-            key="main_n_dependent_vars",
-            help="Más variables = más tests = mayor probabilidad de al menos un falso positivo accidental.",
-        )
-        multiple_variables = n_dependent_vars > 1
-        if multiple_variables:
-            st.caption(
-                "↳ " + " · ".join(DEPENDENT_VARIABLES[:n_dependent_vars])
-            )
-
-        n_groups = 3 if analyze_by_age else 1
-        n_total_tests = n_dependent_vars * n_groups
-        if n_total_tests > 1:
-            st.markdown(
-                f'<div class="tests-warning">⚠️ Se ejecutarán <strong>{n_total_tests} tests</strong> simultáneos '
-                f"({n_dependent_vars} var. × {n_groups} grupo{'s' if n_groups > 1 else ''})"
-                f" — riesgo de comparaciones múltiples</div>",
-                unsafe_allow_html=True,
-            )
-
-    # ── Botones de acción ──────────────────────────────────────────────────────
-    btn_col, reset_col = st.columns([3, 1])
-    get_sample = btn_col.button(
-        "Conseguir muestra →",
+    action_columns = st.columns(2)
+    if action_columns[0].button(
+        "Conseguir muestra",
         use_container_width=True,
         type="primary",
         key="main_get_sample",
-    )
-    reset = reset_col.button(
-        "Limpiar",
-        use_container_width=True,
-        key="main_reset",
-    )
-
-    if get_sample:
+    ):
         sample_data = generate_sample(n=sample_size, true_effect=true_effect)
         st.session_state.current_sample = sample_data
         st.session_state.current_results = run_analysis(
@@ -951,7 +773,11 @@ def render_main_tab() -> None:
             "n_dependent_vars": n_dependent_vars,
         }
 
-    if reset:
+    if action_columns[1].button(
+        "Limpiar memoria",
+        use_container_width=True,
+        key="main_reset",
+    ):
         st.session_state.current_sample = None
         st.session_state.current_results = pd.DataFrame()
         st.session_state.current_results_config = None
@@ -967,120 +793,59 @@ def render_main_tab() -> None:
         "n_dependent_vars": n_dependent_vars,
     }
 
-    # ── Estado vacío ───────────────────────────────────────────────────────────
     if current_results.empty:
-        st.markdown(
-            """
-            <div class="empty-state">
-              <span class="empty-icon">🧪</span>
-              <p>Configura el experimento arriba y haz clic en <strong>Conseguir muestra</strong> para comenzar.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.info(
+            "Haz clic en Conseguir muestra para generar el experimento y ver los resultados."
         )
-        return
-
-    # ── Veredicto del test principal ───────────────────────────────────────────
-    main_row = current_results.iloc[0]
-    p_main = float(main_row["P_Value"])
-    beta_main = float(main_row["Beta"])
-    t_main = float(main_row["T_Statistic"])
-
-    if p_main < 0.05:
-        v_class = "verdict-reject"
-        v_icon = "✓"
-        v_title = "Rechazamos H₀ con α = 5%"
-        v_detail = f"p = {p_main:.4f} &lt; 0.05 — resultado estadísticamente significativo"
     else:
-        v_class = "verdict-fail"
-        v_icon = "✗"
-        v_title = "No rechazamos H₀ con α = 5%"
-        v_detail = f"p = {p_main:.4f} ≥ 0.05 — sin evidencia suficiente contra H₀"
+        metric_columns = st.columns(3)
+        metric_columns[0].metric("Pruebas realizadas", len(current_results))
+        significant_count = int((current_results["P_Value"] < 0.05).sum())
+        metric_columns[1].metric("P-valores < 0.05", significant_count)
+        metric_columns[2].metric(
+            "Proporción < 0.05",
+            f"{(significant_count / len(current_results)) * 100:.1f}%",
+        )
 
     st.markdown(
-        f"""
-        <div class="{v_class}">
-          <div class="verdict-icon">{v_icon}</div>
-          <div class="verdict-body">
-            <div class="verdict-title">{v_title}</div>
-            <div class="verdict-detail">{v_detail}</div>
-          </div>
-          <div class="verdict-stats">
-            <div class="verdict-stat"><span class="vs-label">β̂</span><span class="vs-value">{beta_main:+.4f}</span></div>
-            <div class="verdict-stat"><span class="vs-label">t</span><span class="vs-value">{t_main:.3f}</span></div>
-            <div class="verdict-stat"><span class="vs-label">p</span><span class="vs-value">{p_main:.4f}</span></div>
-          </div>
+        """
+        <div class="section-heading">
+          <div class="section-kicker">Visualización</div>
+          <h3>Distribución teórica del t-statistic</h3>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    st.markdown("**Fórmula:** t-statistic = β / error estándar de β")
+    st.caption(current_context_text(current_config))
 
-    # ── Métricas resumen ───────────────────────────────────────────────────────
-    significant_count = int((current_results["P_Value"] < 0.05).sum())
-    total_tests = len(current_results)
-    proportion = significant_count / total_tests
-
-    m1, m2, m3 = st.columns(3)
-    m1.metric(
-        "Tests realizados",
-        total_tests,
-        help="Variables × grupos analizados en esta muestra",
-    )
-    m2.metric(
-        "p < 0.05",
-        significant_count,
-        help="Tests con resultado estadísticamente significativo",
-    )
-    m3.metric(
-        "Tasa significativa",
-        f"{proportion:.0%}",
-        delta=(
-            f"{proportion - 0.05:+.0%} vs α esperado"
-            if float(current_config.get("true_effect", 0.0)) == 0.0
-            else None
-        ),
-        help="Con H₀ verdadera esperamos ≈ 5% de significativos por azar puro",
-    )
-
-    # ── Gráfico + Tabla lado a lado ────────────────────────────────────────────
-    chart_col, table_col = st.columns([1.1, 1], gap="large")
-
-    with chart_col:
-        st.markdown(
-            """
-            <div class="section-heading">
-              <div class="section-kicker">Visualización</div>
-              <h3>Distribución t bajo H₀</h3>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.caption(current_context_text(current_config))
+    if not current_results.empty:
         st.html(
             build_legend_html(
                 current_results,
                 bool(current_config.get("analyze_by_age", False)),
             )
         )
-        st.plotly_chart(
-            build_theoretical_plot(
-                current_results,
-                bool(current_config.get("analyze_by_age", False)),
-            ),
-            use_container_width=True,
-        )
 
-    with table_col:
+    st.plotly_chart(
+        build_theoretical_plot(
+            current_results,
+            bool(current_config.get("analyze_by_age", False)),
+        ),
+        use_container_width=True,
+    )
+
+    if not current_results.empty:
         st.markdown(
             """
             <div class="section-heading">
-              <div class="section-kicker">Tabla de resultados</div>
-              <h3>Resumen estadístico</h3>
+              <div class="section-kicker">Resultados</div>
+              <h3>Simulación actual</h3>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.caption(build_analysis_summary(current_results))
+        st.markdown(build_analysis_summary(current_results))
         st.dataframe(
             style_results_dataframe(current_results),
             use_container_width=True,
