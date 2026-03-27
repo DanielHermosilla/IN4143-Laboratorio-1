@@ -98,6 +98,8 @@ def inject_styles() -> None:
         button[data-baseweb="tab"] {
             color: #cbd5e1;
             border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 500;
         }
 
         button[data-baseweb="tab"][aria-selected="true"] {
@@ -135,9 +137,9 @@ def inject_styles() -> None:
             flex-wrap: wrap;
             gap: 0.55rem 1rem;
             padding: 0.9rem 1rem;
-            border: 1px solid rgba(15, 23, 42, 0.10);
+            border: 1px solid rgba(148, 163, 184, 0.16);
             border-radius: 16px;
-            background: rgba(255, 255, 255, 0.80);
+            background: rgba(15, 23, 42, 0.78);
             backdrop-filter: blur(8px);
             margin-bottom: 0.8rem;
         }
@@ -145,7 +147,7 @@ def inject_styles() -> None:
         .legend-title {
             width: 100%;
             font-weight: 600;
-            color: #0f172a;
+            color: #f8fafc;
             margin-bottom: 0.15rem;
         }
 
@@ -154,7 +156,7 @@ def inject_styles() -> None:
             align-items: center;
             gap: 0.45rem;
             font-size: 0.9rem;
-            color: #334155;
+            color: #e2e8f0;
             white-space: nowrap;
         }
 
@@ -163,11 +165,11 @@ def inject_styles() -> None:
             height: 12px;
             border-radius: 3px;
             display: inline-block;
-            border: 1px solid rgba(15, 23, 42, 0.12);
+            border: 1px solid rgba(248, 250, 252, 0.18);
         }
 
         .hint-text {
-            color: #475569;
+            color: #94a3b8;
             font-size: 0.95rem;
         }
         </style>
@@ -426,12 +428,8 @@ def build_legend_html(results: pd.DataFrame, analyze_by_age: bool) -> str:
             analyze_by_age,
         )
         items.append(
-            f"""
-            <span class="legend-item">
-              <span class="legend-swatch" style="background:{color};"></span>
-              {label}
-            </span>
-            """
+            f'<span class="legend-item"><span class="legend-swatch" '
+            f'style="background:{color};"></span>{label}</span>'
         )
 
     return (
@@ -453,7 +451,7 @@ def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Fi
             x=x_values,
             y=y_values,
             mode="lines",
-            line={"color": "#2563eb", "width": 3},
+            line={"color": "#f8fafc", "width": 3},
             name="Distribución teórica",
             hovertemplate="t=%{x:.2f}<br>Densidad=%{y:.3f}<extra></extra>",
         )
@@ -494,8 +492,16 @@ def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Fi
         margin={"l": 20, "r": 20, "t": 60, "b": 20},
         height=430,
         showlegend=False,
-        paper_bgcolor="rgba(255,255,255,0.0)",
-        plot_bgcolor="rgba(255,255,255,0.72)",
+        font={"color": "#e2e8f0"},
+        paper_bgcolor="#0b1118",
+        plot_bgcolor="#0b1118",
+    )
+    figure.update_xaxes(showgrid=False, color="#e2e8f0")
+    figure.update_yaxes(
+        showgrid=True,
+        gridcolor="rgba(148, 163, 184, 0.16)",
+        zeroline=False,
+        color="#e2e8f0",
     )
     return figure
 
@@ -654,6 +660,7 @@ def render_main_tab() -> None:
         max_value=1.0,
         value=0.0,
         step=0.1,
+        key="main_true_effect",
     )
     control_columns[0].caption(
         "Sin efecto (placebo)"
@@ -667,11 +674,12 @@ def render_main_tab() -> None:
         max_value=500,
         value=100,
         step=10,
+        key="main_sample_size",
     )
     control_columns[1].caption(f"{sample_size} participantes")
 
     analyze_by_age = control_columns[2].checkbox(
-        "Dividir por grupos de edad", value=False
+        "Dividir por grupos de edad", value=False, key="main_analyze_by_age"
     )
     if analyze_by_age:
         control_columns[2].caption(
@@ -681,23 +689,30 @@ def render_main_tab() -> None:
     multiple_variables = control_columns[3].checkbox(
         "Probar múltiples variables dependientes",
         value=False,
+        key="main_multiple_variables",
     )
-    n_dependent_vars = 1
+    n_dependent_vars = control_columns[3].slider(
+        "Número de variables",
+        min_value=2,
+        max_value=5,
+        value=3,
+        step=1,
+        disabled=not multiple_variables,
+        label_visibility="collapsed",
+        key="main_n_dependent_vars",
+    )
     if multiple_variables:
-        n_dependent_vars = control_columns[3].slider(
-            "Número de variables",
-            min_value=2,
-            max_value=5,
-            value=3,
-            step=1,
-        )
+        control_columns[3].caption(f"Número de variables: {n_dependent_vars}")
         st.caption(
             "Variables incluidas: " + ", ".join(DEPENDENT_VARIABLES[:n_dependent_vars])
         )
 
     action_columns = st.columns(2)
     if action_columns[0].button(
-        "Conseguir muestra", use_container_width=True, type="primary"
+        "Conseguir muestra",
+        use_container_width=True,
+        type="primary",
+        key="main_get_sample",
     ):
         sample_data = generate_sample(n=sample_size, true_effect=true_effect)
         st.session_state.current_sample = sample_data
@@ -715,7 +730,11 @@ def render_main_tab() -> None:
             "n_dependent_vars": n_dependent_vars,
         }
 
-    if action_columns[1].button("Limpiar memoria", use_container_width=True):
+    if action_columns[1].button(
+        "Limpiar memoria",
+        use_container_width=True,
+        key="main_reset",
+    ):
         st.session_state.current_sample = None
         st.session_state.current_results = pd.DataFrame()
         st.session_state.current_results_config = None
@@ -733,7 +752,7 @@ def render_main_tab() -> None:
 
     if current_results.empty:
         st.info(
-            "Haz clic en `Conseguir muestra` para generar el experimento y ver los resultados."
+            "Haz clic en Conseguir muestra para generar el experimento y ver los resultados."
         )
     else:
         metric_columns = st.columns(3)
@@ -750,12 +769,11 @@ def render_main_tab() -> None:
     st.caption(current_context_text(current_config))
 
     if not current_results.empty:
-        st.markdown(
+        st.html(
             build_legend_html(
                 current_results,
                 bool(current_config.get("analyze_by_age", False)),
-            ),
-            unsafe_allow_html=True,
+            )
         )
 
     st.plotly_chart(
@@ -787,6 +805,7 @@ def render_replication_tab() -> None:
                 max_value=2000,
                 value=500,
                 step=50,
+                key="replication_n_replications",
             )
         )
         replication_sample_size = int(
@@ -796,6 +815,7 @@ def render_replication_tab() -> None:
                 max_value=500,
                 value=100,
                 step=10,
+                key="replication_sample_size",
             )
         )
         replication_true_effect = float(
@@ -806,12 +826,14 @@ def render_replication_tab() -> None:
                 value=0.0,
                 step=0.1,
                 format="%.1f",
+                key="replication_true_effect",
             )
         )
         mode_label = st.radio(
             "Opciones avanzadas",
             options=list(REPLICATION_MODES.keys()),
             help="En la replicación se activa a lo sumo una opción avanzada a la vez.",
+            key="replication_mode",
         )
         mode = REPLICATION_MODES[mode_label]
 
@@ -823,9 +845,15 @@ def render_replication_tab() -> None:
                 max_value=5,
                 value=3,
                 step=1,
+                key="replication_n_dependent_vars",
             )
 
-        if st.button("Ejecutar meta-estudio", use_container_width=True, type="primary"):
+        if st.button(
+            "Ejecutar meta-estudio",
+            use_container_width=True,
+            type="primary",
+            key="run_replication",
+        ):
             progress_bar = st.progress(0.0, text="Preparando meta-estudio...")
 
             def update_progress(step: int, total: int) -> None:
