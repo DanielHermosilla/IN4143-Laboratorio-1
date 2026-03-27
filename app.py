@@ -50,7 +50,8 @@ REPLICATION_MODES = {
 }
 
 
-def inject_styles() -> None:
+def inject_styles(theme: str = "dark") -> None:
+    light = theme == "light"
     st.markdown(
         """
         <style>
@@ -212,10 +213,87 @@ def inject_styles() -> None:
             font-size: 0.95rem;
         }
 
+        /* ── Theme toggle button ── */
+        div[data-testid="stButton"].theme-toggle > button {
+            background: transparent !important;
+            border: 1px solid rgba(148,163,184,0.30) !important;
+            border-radius: 50% !important;
+            width: 2.4rem !important;
+            height: 2.4rem !important;
+            padding: 0 !important;
+            font-size: 1.1rem !important;
+            line-height: 1 !important;
+            min-height: unset !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin-top: 1.1rem !important;
+            float: right !important;
+        }
+
         </style>
         """,
         unsafe_allow_html=True,
     )
+
+    if light:
+        st.markdown(
+            """
+            <style>
+            .stApp,
+            [data-testid="stAppViewContainer"] {
+                background: #f1f5f9 !important;
+                color: #0f172a !important;
+            }
+            [data-testid="stHeader"] {
+                background: rgba(241,245,249,0.95) !important;
+                border-bottom: 1px solid rgba(15,23,42,0.07) !important;
+            }
+            [data-testid="stSidebar"] {
+                background: #ffffff !important;
+                border-right: 1px solid rgba(15,23,42,0.08) !important;
+            }
+            html, body, [class*="css"] { color: #0f172a !important; }
+            h1, h2, h3,
+            label,
+            [data-testid="stMarkdownContainer"] p,
+            [data-testid="stMarkdownContainer"] li,
+            [data-testid="stCaptionContainer"] { color: #0f172a !important; }
+            div[data-baseweb="tab-list"] {
+                background: rgba(255,255,255,0.92) !important;
+                border-color: rgba(15,23,42,0.10) !important;
+            }
+            button[data-baseweb="tab"] { color: #475569 !important; }
+            button[data-baseweb="tab"][aria-selected="true"] {
+                background: rgba(37,99,235,0.10) !important;
+                color: #0f172a !important;
+            }
+            div[data-testid="stMetric"] {
+                background: rgba(255,255,255,0.95) !important;
+                border-color: rgba(15,23,42,0.10) !important;
+            }
+            div[data-testid="stMetric"] * { color: #0f172a !important; }
+            .main-intro {
+                background: rgba(255,255,255,0.72) !important;
+                border-color: rgba(15,23,42,0.10) !important;
+            }
+            .main-kicker { color: #2563eb !important; }
+            .main-intro h2 { color: #0f172a !important; }
+            .main-intro p  { color: #475569 !important; }
+            .section-heading h3 { color: #0f172a !important; }
+            .section-kicker { color: #64748b !important; }
+            .legend-wrap {
+                background: rgba(255,255,255,0.92) !important;
+                border-color: rgba(15,23,42,0.10) !important;
+            }
+            .legend-title { color: #0f172a !important; }
+            .legend-item  { color: #1e293b !important; }
+            .hint-text    { color: #64748b !important; }
+            [data-testid="stAppViewBlockContainer"] { color: #0f172a !important; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def initialize_state() -> None:
@@ -229,6 +307,8 @@ def initialize_state() -> None:
         st.session_state.replication_results = None
     if "replication_config" not in st.session_state:
         st.session_state.replication_config = None
+    if "theme" not in st.session_state:
+        st.session_state.theme = "dark"
 
 
 def rgba(hex_color: str, alpha: float = 1.0) -> str:
@@ -485,6 +565,12 @@ def build_legend_html(results: pd.DataFrame, analyze_by_age: bool) -> str:
 
 
 def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Figure:
+    _theme = st.session_state.get("theme", "dark")
+    _bg = "rgba(0,0,0,0)" if _theme == "light" else "#0b1118"
+    _font_color = "#1e293b" if _theme == "light" else "#e2e8f0"
+    _curve_color = "#334155" if _theme == "light" else "#f8fafc"
+    _grid_color = "rgba(15,23,42,0.12)" if _theme == "light" else "rgba(148, 163, 184, 0.16)"
+
     x_values = np.arange(-4.5, 4.6, 0.1)
     y_values = norm.pdf(x_values, loc=0, scale=1)
     critical_value = 1.96
@@ -495,7 +581,7 @@ def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Fi
             x=x_values,
             y=y_values,
             mode="lines",
-            line={"color": "#f8fafc", "width": 3},
+            line={"color": _curve_color, "width": 3},
             name="Distribución teórica",
             hovertemplate="t=%{x:.2f}<br>Densidad=%{y:.3f}<extra></extra>",
         )
@@ -536,16 +622,16 @@ def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Fi
         margin={"l": 20, "r": 20, "t": 60, "b": 20},
         height=430,
         showlegend=False,
-        font={"color": "#e2e8f0"},
-        paper_bgcolor="#0b1118",
-        plot_bgcolor="#0b1118",
+        font={"color": _font_color},
+        paper_bgcolor=_bg,
+        plot_bgcolor=_bg,
     )
-    figure.update_xaxes(showgrid=False, color="#e2e8f0")
+    figure.update_xaxes(showgrid=False, color=_font_color)
     figure.update_yaxes(
         showgrid=True,
-        gridcolor="rgba(148, 163, 184, 0.16)",
+        gridcolor=_grid_color,
         zeroline=False,
-        color="#e2e8f0",
+        color=_font_color,
     )
     return figure
 
@@ -584,6 +670,11 @@ def build_replication_plot(
     n_dependent_vars: int,
     true_effect: float,
 ) -> go.Figure:
+    _theme = st.session_state.get("theme", "dark")
+    _bg = "rgba(0,0,0,0)" if _theme == "light" else "#0b1118"
+    _font_color = "#1e293b" if _theme == "light" else "#e2e8f0"
+    _grid_color = "rgba(15,23,42,0.12)" if _theme == "light" else "rgba(148, 163, 184, 0.16)"
+
     data = replication_results.copy()
     steps = np.arange(1, len(data) + 1)
     data["cumulative_todos"] = data["rejected_todos"].astype(int).cumsum() / steps
@@ -653,16 +744,16 @@ def build_replication_plot(
         },
         margin={"l": 20, "r": 20, "t": 60, "b": 20},
         height=560,
-        font={"color": "#e2e8f0"},
-        paper_bgcolor="#0b1118",
-        plot_bgcolor="#0b1118",
+        font={"color": _font_color},
+        paper_bgcolor=_bg,
+        plot_bgcolor=_bg,
     )
-    figure.update_xaxes(showgrid=False, color="#e2e8f0")
+    figure.update_xaxes(showgrid=False, color=_font_color)
     figure.update_yaxes(
         showgrid=True,
-        gridcolor="rgba(148, 163, 184, 0.16)",
+        gridcolor=_grid_color,
         zeroline=False,
-        color="#e2e8f0",
+        color=_font_color,
     )
 
     return figure
@@ -1003,10 +1094,20 @@ def main() -> None:
         page_title="TralaleroTralaLex",
         layout="wide",
     )
-    inject_styles()
     initialize_state()
+    inject_styles(st.session_state.theme)
 
-    st.title("Simulador de Inferencia Causal")
+    title_col, toggle_col = st.columns([0.96, 0.04])
+    with title_col:
+        st.title("Simulador de Inferencia Causal")
+    with toggle_col:
+        is_dark = st.session_state.theme == "dark"
+        st.markdown('<div class="theme-toggle">', unsafe_allow_html=True)
+        if st.button("🌙" if is_dark else "☀️", key="theme_toggle",
+                     help="Cambiar a tema claro" if is_dark else "Cambiar a tema oscuro"):
+            st.session_state.theme = "light" if is_dark else "dark"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     experiment_tab, replication_tab = st.tabs(
         ["Experimento principal", "Replicación"],
