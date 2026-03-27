@@ -56,20 +56,64 @@ def inject_styles() -> None:
         <style>
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
 
-        .stApp {
-            background:
-                radial-gradient(circle at top left, rgba(153, 246, 228, 0.40), transparent 28%),
-                radial-gradient(circle at top right, rgba(96, 165, 250, 0.25), transparent 32%),
-                linear-gradient(180deg, #f4f8fb 0%, #eef3f8 100%);
+        .stApp,
+        [data-testid="stAppViewContainer"] {
+            background: #0b1118;
+            color: #e2e8f0;
+        }
+
+        [data-testid="stHeader"] {
+            background: rgba(11, 17, 24, 0.92);
+        }
+
+        [data-testid="stSidebar"] {
+            background: #0f1722;
+            border-right: 1px solid rgba(148, 163, 184, 0.10);
         }
 
         html, body, [class*="css"]  {
             font-family: "IBM Plex Sans", sans-serif;
         }
 
+        h1, h2, h3,
+        label,
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] li,
+        [data-testid="stCaptionContainer"] {
+            color: #e2e8f0;
+        }
+
         h1, h2, h3 {
             font-family: "Space Grotesk", sans-serif;
             letter-spacing: -0.02em;
+        }
+
+        div[data-baseweb="tab-list"] {
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 16px;
+            padding: 0.3rem;
+        }
+
+        button[data-baseweb="tab"] {
+            color: #cbd5e1;
+            border-radius: 12px;
+        }
+
+        button[data-baseweb="tab"][aria-selected="true"] {
+            background: rgba(37, 99, 235, 0.22);
+            color: #f8fafc;
+        }
+
+        div[data-testid="stMetric"] {
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 18px;
+            padding: 0.9rem 1rem;
+        }
+
+        div[data-testid="stMetric"] * {
+            color: #e2e8f0;
         }
 
         .hero-card {
@@ -280,7 +324,9 @@ def run_replication_study(
     n_dependent_vars: int,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> pd.DataFrame:
-    variables_to_test = range(1, n_dependent_vars + 1) if mode == "multiple_variables" else [1]
+    variables_to_test = (
+        range(1, n_dependent_vars + 1) if mode == "multiple_variables" else [1]
+    )
     rows: list[dict[str, int | bool]] = []
 
     for replication_index in range(1, n_replications + 1):
@@ -413,8 +459,12 @@ def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Fi
         )
     )
 
-    figure.add_vline(x=-critical_value, line_color="#dc2626", line_dash="dash", line_width=2)
-    figure.add_vline(x=critical_value, line_color="#dc2626", line_dash="dash", line_width=2)
+    figure.add_vline(
+        x=-critical_value, line_color="#dc2626", line_dash="dash", line_width=2
+    )
+    figure.add_vline(
+        x=critical_value, line_color="#dc2626", line_dash="dash", line_width=2
+    )
     figure.add_vline(x=0, line_color="#64748b", line_dash="dot", line_width=1)
 
     if not results.empty:
@@ -450,10 +500,10 @@ def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Fi
     return figure
 
 
-def build_replication_caption(mode: str, n_dependent_vars: int, true_effect: float) -> str:
-    prefix = (
-        "La línea azul muestra la tasa acumulada de estudios con p < 0.05 usando toda la muestra. "
-    )
+def build_replication_caption(
+    mode: str, n_dependent_vars: int, true_effect: float
+) -> str:
+    prefix = "La línea azul muestra la tasa acumulada de estudios con p < 0.05 usando toda la muestra. "
 
     if mode == "multiple_variables":
         suffix = (
@@ -469,7 +519,11 @@ def build_replication_caption(mode: str, n_dependent_vars: int, true_effect: flo
         suffix = "Este escenario corresponde al análisis estándar."
 
     if true_effect == 0:
-        return prefix + suffix + " La referencia roja punteada marca el 5% esperado bajo la hipótesis nula."
+        return (
+            prefix
+            + suffix
+            + " La referencia roja punteada marca el 5% esperado bajo la hipótesis nula."
+        )
 
     return prefix + suffix
 
@@ -540,7 +594,13 @@ def build_replication_plot(
         xaxis_title="Número de estudios acumulados",
         yaxis_title="Proporción acumulada",
         yaxis={"tickformat": ".0%", "range": [0, min(1.0, float(max_y) * 1.1 + 0.02)]},
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "left", "x": 0},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+        },
         margin={"l": 20, "r": 20, "t": 60, "b": 20},
         height=560,
         paper_bgcolor="rgba(255,255,255,0.0)",
@@ -596,7 +656,9 @@ def render_main_tab() -> None:
         step=0.1,
     )
     control_columns[0].caption(
-        "Sin efecto (placebo)" if true_effect == 0 else f"Mejora de {true_effect:.1f} puntos"
+        "Sin efecto (placebo)"
+        if true_effect == 0
+        else f"Mejora de {true_effect:.1f} puntos"
     )
 
     sample_size = control_columns[1].slider(
@@ -608,9 +670,13 @@ def render_main_tab() -> None:
     )
     control_columns[1].caption(f"{sample_size} participantes")
 
-    analyze_by_age = control_columns[2].checkbox("Dividir por grupos de edad", value=False)
+    analyze_by_age = control_columns[2].checkbox(
+        "Dividir por grupos de edad", value=False
+    )
     if analyze_by_age:
-        control_columns[2].caption("Se analizan jóvenes, adultos y veteranos por separado.")
+        control_columns[2].caption(
+            "Se analizan jóvenes, adultos y veteranos por separado."
+        )
 
     multiple_variables = control_columns[3].checkbox(
         "Probar múltiples variables dependientes",
@@ -626,12 +692,13 @@ def render_main_tab() -> None:
             step=1,
         )
         st.caption(
-            "Variables incluidas: "
-            + ", ".join(DEPENDENT_VARIABLES[:n_dependent_vars])
+            "Variables incluidas: " + ", ".join(DEPENDENT_VARIABLES[:n_dependent_vars])
         )
 
     action_columns = st.columns(2)
-    if action_columns[0].button("Conseguir muestra", use_container_width=True, type="primary"):
+    if action_columns[0].button(
+        "Conseguir muestra", use_container_width=True, type="primary"
+    ):
         sample_data = generate_sample(n=sample_size, true_effect=true_effect)
         st.session_state.current_sample = sample_data
         st.session_state.current_results = run_analysis(
@@ -665,7 +732,9 @@ def render_main_tab() -> None:
     }
 
     if current_results.empty:
-        st.info("Haz clic en `Conseguir muestra` para generar el experimento y ver los resultados.")
+        st.info(
+            "Haz clic en `Conseguir muestra` para generar el experimento y ver los resultados."
+        )
     else:
         metric_columns = st.columns(3)
         metric_columns[0].metric("Pruebas realizadas", len(current_results))
@@ -783,8 +852,14 @@ def render_replication_tab() -> None:
         replication_results = st.session_state.replication_results
         replication_config = st.session_state.replication_config
 
-        if replication_results is None or replication_results.empty or replication_config is None:
-            st.info("Ejecuta el meta-estudio para ver cómo evoluciona la tasa acumulada de rechazos.")
+        if (
+            replication_results is None
+            or replication_results.empty
+            or replication_config is None
+        ):
+            st.info(
+                "Ejecuta el meta-estudio para ver cómo evoluciona la tasa acumulada de rechazos."
+            )
             return
 
         final_columns = st.columns(3)
