@@ -1,0 +1,856 @@
+from __future__ import annotations
+
+from typing import Callable
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+from scipy.stats import norm, t as student_t
+
+
+DEPENDENT_VARIABLES = [
+    "Probabilidad de resolver Sudoku",
+    "Prob. Resolver Crucigrama de letras",
+    "Capacidad de recordar nombres raros",
+    "Habilidad para encontrar llaves perdidas",
+    "Velocidad para resolver laberintos",
+    "Precisión en recordar cumpleaños",
+    "Eficiencia organizando calcetines",
+    "Rapidez contando ovejas para dormir",
+    "Destreza armando muebles de IKEA",
+    "Intuición para adivinar contraseñas",
+]
+
+MAIN_AGE_GROUPS = {
+    "Jóvenes (20-40)": "jovenes",
+    "Adultos (40-60)": "adultos",
+    "Veteranos (+60)": "veteranos",
+}
+
+BASE_COLORS = {
+    DEPENDENT_VARIABLES[0]: "#66C2A5",
+    DEPENDENT_VARIABLES[1]: "#FC8D62",
+    DEPENDENT_VARIABLES[2]: "#8DA0CB",
+    DEPENDENT_VARIABLES[3]: "#E78AC3",
+    DEPENDENT_VARIABLES[4]: "#A6D854",
+}
+
+GROUP_ALPHA = {
+    "Jóvenes (20-40)": 0.60,
+    "Adultos (40-60)": 0.80,
+    "Veteranos (+60)": 1.00,
+    "Todos": 1.00,
+}
+
+REPLICATION_MODES = {
+    "Análisis estándar": "standard",
+    "Efectos heterogéneos por grupo etario": "age",
+    "Múltiples variables dependientes": "multiple_variables",
+}
+
+
+def inject_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
+
+        .stApp {
+            background:
+                radial-gradient(circle at top left, rgba(153, 246, 228, 0.40), transparent 28%),
+                radial-gradient(circle at top right, rgba(96, 165, 250, 0.25), transparent 32%),
+                linear-gradient(180deg, #f4f8fb 0%, #eef3f8 100%);
+        }
+
+        html, body, [class*="css"]  {
+            font-family: "IBM Plex Sans", sans-serif;
+        }
+
+        h1, h2, h3 {
+            font-family: "Space Grotesk", sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-card {
+            background: linear-gradient(135deg, #0f766e 0%, #1d4ed8 100%);
+            border-radius: 22px;
+            color: white;
+            padding: 1.6rem 1.8rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+        }
+
+        .hero-card h2 {
+            margin: 0 0 0.6rem 0;
+            color: white;
+        }
+
+        .legend-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem 1rem;
+            padding: 0.9rem 1rem;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.80);
+            backdrop-filter: blur(8px);
+            margin-bottom: 0.8rem;
+        }
+
+        .legend-title {
+            width: 100%;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 0.15rem;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.9rem;
+            color: #334155;
+            white-space: nowrap;
+        }
+
+        .legend-swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            display: inline-block;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+        }
+
+        .hint-text {
+            color: #475569;
+            font-size: 0.95rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def initialize_state() -> None:
+    if "current_sample" not in st.session_state:
+        st.session_state.current_sample = None
+    if "current_results" not in st.session_state:
+        st.session_state.current_results = pd.DataFrame()
+    if "current_results_config" not in st.session_state:
+        st.session_state.current_results_config = None
+    if "replication_results" not in st.session_state:
+        st.session_state.replication_results = None
+    if "replication_config" not in st.session_state:
+        st.session_state.replication_config = None
+
+
+def rgba(hex_color: str, alpha: float = 1.0) -> str:
+    clean = hex_color.lstrip("#")
+    red = int(clean[0:2], 16)
+    green = int(clean[2:4], 16)
+    blue = int(clean[4:6], 16)
+    return f"rgba({red}, {green}, {blue}, {alpha:.2f})"
+
+
+def generate_sample(n: int = 100, true_effect: float = 0.0) -> pd.DataFrame:
+    rng = np.random.default_rng()
+    treatment = np.resize(np.array([0, 1]), n)
+    ages = np.rint(rng.uniform(20, 80, size=n)).astype(int)
+    age_group = np.where(
+        ages <= 40,
+        "jovenes",
+        np.where(ages <= 60, "adultos", "veteranos"),
+    )
+    outcome_base = rng.normal(0, 1, size=n) + treatment * true_effect
+
+    data = {
+        "treatment": treatment,
+        "age": ages,
+        "age_group": age_group,
+        "id": np.arange(1, n + 1),
+    }
+
+    for index in range(1, len(DEPENDENT_VARIABLES) + 1):
+        data[f"var_{index}"] = outcome_base + rng.normal(0, 0.3, size=n)
+
+    return pd.DataFrame(data)
+
+
+def filter_by_age_group(data: pd.DataFrame, group_code: str) -> pd.DataFrame:
+    if group_code == "todos":
+        return data.copy()
+    return data.loc[data["age_group"] == group_code].copy()
+
+
+def calculate_statistics(
+    data: pd.DataFrame,
+    var_index: int = 1,
+    group_name: str = "Todos",
+) -> dict[str, float | str | bool] | None:
+    variable_name = f"var_{var_index}"
+    treatment_data = data.loc[data["treatment"] == 1, variable_name].dropna()
+    control_data = data.loc[data["treatment"] == 0, variable_name].dropna()
+
+    if len(treatment_data) < 2 or len(control_data) < 2:
+        return None
+
+    mean_treatment = float(treatment_data.mean())
+    mean_control = float(control_data.mean())
+    beta = mean_treatment - mean_control
+    var_treatment = float(treatment_data.var(ddof=1))
+    var_control = float(control_data.var(ddof=1))
+    n_treatment = int(treatment_data.shape[0])
+    n_control = int(control_data.shape[0])
+
+    pooled_var = (
+        ((n_treatment - 1) * var_treatment) + ((n_control - 1) * var_control)
+    ) / (n_treatment + n_control - 2)
+    se_beta = float(np.sqrt(pooled_var * ((1 / n_treatment) + (1 / n_control))))
+
+    if not np.isfinite(se_beta) or se_beta == 0:
+        return None
+
+    t_statistic = beta / se_beta
+    degrees_of_freedom = n_treatment + n_control - 2
+    p_value = float(2 * student_t.sf(abs(t_statistic), degrees_of_freedom))
+    t_critical = float(student_t.ppf(0.975, degrees_of_freedom))
+    ci_lower = beta - (t_critical * se_beta)
+    ci_upper = beta + (t_critical * se_beta)
+
+    return {
+        "variable": DEPENDENT_VARIABLES[var_index - 1],
+        "variable_index": var_index,
+        "group": group_name,
+        "beta": beta,
+        "se_beta": se_beta,
+        "t_statistic": t_statistic,
+        "p_value": p_value,
+        "ci_lower": ci_lower,
+        "ci_upper": ci_upper,
+        "n_total": int(data.shape[0]),
+        "n_treatment": n_treatment,
+        "n_control": n_control,
+        "significant": p_value < 0.05,
+    }
+
+
+def run_analysis(
+    sample_data: pd.DataFrame,
+    analyze_by_age: bool,
+    multiple_variables: bool,
+    n_dependent_vars: int,
+) -> pd.DataFrame:
+    groups_to_analyze = MAIN_AGE_GROUPS if analyze_by_age else {"Todos": "todos"}
+    variables_to_analyze = range(1, n_dependent_vars + 1) if multiple_variables else [1]
+
+    rows: list[dict[str, float | str | int]] = []
+    for variable_index in variables_to_analyze:
+        for group_name, group_code in groups_to_analyze.items():
+            group_data = filter_by_age_group(sample_data, group_code)
+            if group_data.shape[0] < 4:
+                continue
+
+            statistics = calculate_statistics(group_data, variable_index, group_name)
+            if statistics is None:
+                continue
+
+            rows.append(
+                {
+                    "Variable_Dependiente": statistics["variable"],
+                    "Grupo_Etario": statistics["group"],
+                    "Beta": round(float(statistics["beta"]), 4),
+                    "Error_Std": round(float(statistics["se_beta"]), 4),
+                    "T_Statistic": round(float(statistics["t_statistic"]), 3),
+                    "P_Value": round(float(statistics["p_value"]), 4),
+                    "IC_Inferior": round(float(statistics["ci_lower"]), 4),
+                    "IC_Superior": round(float(statistics["ci_upper"]), 4),
+                    "N_Total": int(statistics["n_total"]),
+                }
+            )
+
+    return pd.DataFrame(rows)
+
+
+def run_replication_study(
+    n_replications: int,
+    sample_size: int,
+    true_effect: float,
+    mode: str,
+    n_dependent_vars: int,
+    progress_callback: Callable[[int, int], None] | None = None,
+) -> pd.DataFrame:
+    variables_to_test = range(1, n_dependent_vars + 1) if mode == "multiple_variables" else [1]
+    rows: list[dict[str, int | bool]] = []
+
+    for replication_index in range(1, n_replications + 1):
+        sample_data = generate_sample(n=sample_size, true_effect=true_effect)
+
+        stats_all = calculate_statistics(sample_data, 1, "Todos")
+        rejected_todos = bool(stats_all and stats_all["p_value"] < 0.05)
+
+        rejected_any_var = False
+        if mode == "multiple_variables" and n_dependent_vars > 1:
+            rejected_any_var = any(
+                bool(stats and stats["p_value"] < 0.05)
+                for stats in (
+                    calculate_statistics(sample_data, variable_index, "Todos")
+                    for variable_index in variables_to_test
+                )
+            )
+
+        rejected_any_subgroup = False
+        if mode == "age":
+            subgroup_rejections = []
+            for group_name, group_code in MAIN_AGE_GROUPS.items():
+                subgroup_data = filter_by_age_group(sample_data, group_code)
+                if subgroup_data.shape[0] < 4:
+                    continue
+                stats = calculate_statistics(subgroup_data, 1, group_name)
+                subgroup_rejections.append(bool(stats and stats["p_value"] < 0.05))
+            rejected_any_subgroup = any(subgroup_rejections)
+
+        rows.append(
+            {
+                "replication": replication_index,
+                "rejected_todos": rejected_todos,
+                "rejected_any_var": rejected_any_var,
+                "rejected_any_subgroup": rejected_any_subgroup,
+            }
+        )
+
+        if progress_callback is not None:
+            progress_callback(replication_index, n_replications)
+
+    return pd.DataFrame(rows)
+
+
+def current_context_text(config: dict[str, object]) -> str:
+    analyze_by_age = bool(config.get("analyze_by_age", False))
+    multiple_variables = bool(config.get("multiple_variables", False))
+    true_effect = float(config.get("true_effect", 0.0))
+
+    if multiple_variables and analyze_by_age:
+        analysis_label = "Múltiples variables y múltiples grupos"
+    elif multiple_variables:
+        analysis_label = "Múltiples variables"
+    elif analyze_by_age:
+        analysis_label = "Múltiples grupos etarios"
+    else:
+        analysis_label = "Análisis simple"
+
+    return f"{analysis_label} | Efecto real de TralaleroTralaLex: {true_effect:.1f}"
+
+
+def build_analysis_summary(results: pd.DataFrame) -> str:
+    if results.empty:
+        return ""
+
+    n_variables = results["Variable_Dependiente"].nunique()
+    n_groups = results["Grupo_Etario"].nunique()
+    n_significant = int((results["P_Value"] < 0.05).sum())
+    return (
+        f"Simulación actual: {n_variables} variables x {n_groups} grupos = "
+        f"{len(results)} análisis totales. {n_significant} con p < 0.05."
+    )
+
+
+def plot_color(variable_name: str, group_name: str, analyze_by_age: bool) -> str:
+    base_color = BASE_COLORS.get(variable_name, "#0f766e")
+    alpha = GROUP_ALPHA.get(group_name, 1.0) if analyze_by_age else 1.0
+    return rgba(base_color, alpha)
+
+
+def build_legend_html(results: pd.DataFrame, analyze_by_age: bool) -> str:
+    if results.empty:
+        return ""
+
+    unique_rows = (
+        results[["Variable_Dependiente", "Grupo_Etario"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+
+    items = []
+    for _, row in unique_rows.iterrows():
+        label = f"{row['Variable_Dependiente']} - {row['Grupo_Etario']}"
+        color = plot_color(
+            row["Variable_Dependiente"],
+            row["Grupo_Etario"],
+            analyze_by_age,
+        )
+        items.append(
+            f"""
+            <span class="legend-item">
+              <span class="legend-swatch" style="background:{color};"></span>
+              {label}
+            </span>
+            """
+        )
+
+    return (
+        '<div class="legend-wrap">'
+        '<div class="legend-title">Leyenda de t-statistics</div>'
+        + "".join(items)
+        + "</div>"
+    )
+
+
+def build_theoretical_plot(results: pd.DataFrame, analyze_by_age: bool) -> go.Figure:
+    x_values = np.arange(-4.5, 4.6, 0.1)
+    y_values = norm.pdf(x_values, loc=0, scale=1)
+    critical_value = 1.96
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scatter(
+            x=x_values,
+            y=y_values,
+            mode="lines",
+            line={"color": "#2563eb", "width": 3},
+            name="Distribución teórica",
+            hovertemplate="t=%{x:.2f}<br>Densidad=%{y:.3f}<extra></extra>",
+        )
+    )
+
+    figure.add_vline(x=-critical_value, line_color="#dc2626", line_dash="dash", line_width=2)
+    figure.add_vline(x=critical_value, line_color="#dc2626", line_dash="dash", line_width=2)
+    figure.add_vline(x=0, line_color="#64748b", line_dash="dot", line_width=1)
+
+    if not results.empty:
+        for _, row in results.iterrows():
+            figure.add_vline(
+                x=float(row["T_Statistic"]),
+                line_color=plot_color(
+                    row["Variable_Dependiente"],
+                    row["Grupo_Etario"],
+                    analyze_by_age,
+                ),
+                line_width=2.5,
+            )
+
+    figure.add_annotation(
+        x=critical_value + 0.35,
+        y=float(y_values.max() * 0.90),
+        text="Crítico si |t| > 1.96",
+        showarrow=False,
+        font={"color": "#dc2626", "size": 12},
+    )
+
+    figure.update_layout(
+        title="Distribución teórica del t-statistic",
+        xaxis_title="T-Statistic",
+        yaxis_title="Densidad de probabilidad",
+        margin={"l": 20, "r": 20, "t": 60, "b": 20},
+        height=430,
+        showlegend=False,
+        paper_bgcolor="rgba(255,255,255,0.0)",
+        plot_bgcolor="rgba(255,255,255,0.72)",
+    )
+    return figure
+
+
+def build_replication_caption(mode: str, n_dependent_vars: int, true_effect: float) -> str:
+    prefix = (
+        "La línea azul muestra la tasa acumulada de estudios con p < 0.05 usando toda la muestra. "
+    )
+
+    if mode == "multiple_variables":
+        suffix = (
+            f"La línea verde muestra la proporción de estudios donde al menos una de las "
+            f"{n_dependent_vars} variables fue significativa."
+        )
+    elif mode == "age":
+        suffix = (
+            "La línea naranja muestra la proporción de estudios donde al menos uno de los "
+            "subgrupos etarios fue significativo."
+        )
+    else:
+        suffix = "Este escenario corresponde al análisis estándar."
+
+    if true_effect == 0:
+        return prefix + suffix + " La referencia roja punteada marca el 5% esperado bajo la hipótesis nula."
+
+    return prefix + suffix
+
+
+def build_replication_plot(
+    replication_results: pd.DataFrame,
+    mode: str,
+    n_dependent_vars: int,
+    true_effect: float,
+) -> go.Figure:
+    data = replication_results.copy()
+    steps = np.arange(1, len(data) + 1)
+    data["cumulative_todos"] = data["rejected_todos"].astype(int).cumsum() / steps
+    data["cumulative_any_var"] = data["rejected_any_var"].astype(int).cumsum() / steps
+    data["cumulative_any_subgroup"] = (
+        data["rejected_any_subgroup"].astype(int).cumsum() / steps
+    )
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scatter(
+            x=data["replication"],
+            y=data["cumulative_todos"],
+            mode="lines",
+            line={"color": "#2563eb", "width": 3},
+            name="Todos los datos",
+            hovertemplate="Estudio %{x}<br>Tasa %{y:.1%}<extra></extra>",
+        )
+    )
+
+    if mode == "multiple_variables":
+        figure.add_trace(
+            go.Scatter(
+                x=data["replication"],
+                y=data["cumulative_any_var"],
+                mode="lines",
+                line={"color": "#16a34a", "width": 3, "dash": "dash"},
+                name="Al menos una variable",
+                hovertemplate="Estudio %{x}<br>Tasa %{y:.1%}<extra></extra>",
+            )
+        )
+
+    if mode == "age":
+        figure.add_trace(
+            go.Scatter(
+                x=data["replication"],
+                y=data["cumulative_any_subgroup"],
+                mode="lines",
+                line={"color": "#f97316", "width": 3, "dash": "dash"},
+                name="Al menos un subgrupo",
+                hovertemplate="Estudio %{x}<br>Tasa %{y:.1%}<extra></extra>",
+            )
+        )
+
+    if true_effect == 0:
+        figure.add_hline(y=0.05, line_color="#dc2626", line_dash="dot", line_width=2)
+
+    max_y = data["cumulative_todos"].max()
+    if mode == "multiple_variables":
+        max_y = max(max_y, data["cumulative_any_var"].max())
+    if mode == "age":
+        max_y = max(max_y, data["cumulative_any_subgroup"].max())
+    if true_effect == 0:
+        max_y = max(max_y, 0.05)
+
+    figure.update_layout(
+        title="Evolución de la tasa de p-valores < 0.05",
+        xaxis_title="Número de estudios acumulados",
+        yaxis_title="Proporción acumulada",
+        yaxis={"tickformat": ".0%", "range": [0, min(1.0, float(max_y) * 1.1 + 0.02)]},
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "left", "x": 0},
+        margin={"l": 20, "r": 20, "t": 60, "b": 20},
+        height=560,
+        paper_bgcolor="rgba(255,255,255,0.0)",
+        plot_bgcolor="rgba(255,255,255,0.72)",
+    )
+
+    return figure
+
+
+def style_results_dataframe(results: pd.DataFrame) -> pd.io.formats.style.Styler:
+    formatting = {
+        "Beta": "{:.4f}",
+        "Error_Std": "{:.4f}",
+        "T_Statistic": "{:.3f}",
+        "P_Value": "{:.4f}",
+        "IC_Inferior": "{:.4f}",
+        "IC_Superior": "{:.4f}",
+    }
+
+    def highlight_significance(values: pd.Series) -> list[str]:
+        return [
+            "background-color: #fde68a; font-weight: 700;" if value < 0.05 else ""
+            for value in values
+        ]
+
+    return (
+        results.style.format(formatting)
+        .apply(highlight_significance, subset=["P_Value"])
+        .hide(axis="index")
+    )
+
+
+def render_main_tab() -> None:
+    st.markdown(
+        """
+        <div class="hero-card">
+          <h2>TralaleroTralaLex: ¿Milagro cognitivo o azar?</h2>
+          <p>
+            Simula un experimento aleatorizado con tratamiento y placebo, calcula pruebas t y
+            observa cómo cambian los p-valores cuando separas por edad o pruebas varias variables.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    control_columns = st.columns(4)
+    true_effect = control_columns[0].slider(
+        "Efecto verdadero de TralaleroTralaLex",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.0,
+        step=0.1,
+    )
+    control_columns[0].caption(
+        "Sin efecto (placebo)" if true_effect == 0 else f"Mejora de {true_effect:.1f} puntos"
+    )
+
+    sample_size = control_columns[1].slider(
+        "Tamaño de muestra inicial",
+        min_value=20,
+        max_value=500,
+        value=100,
+        step=10,
+    )
+    control_columns[1].caption(f"{sample_size} participantes")
+
+    analyze_by_age = control_columns[2].checkbox("Dividir por grupos de edad", value=False)
+    if analyze_by_age:
+        control_columns[2].caption("Se analizan jóvenes, adultos y veteranos por separado.")
+
+    multiple_variables = control_columns[3].checkbox(
+        "Probar múltiples variables dependientes",
+        value=False,
+    )
+    n_dependent_vars = 1
+    if multiple_variables:
+        n_dependent_vars = control_columns[3].slider(
+            "Número de variables",
+            min_value=2,
+            max_value=5,
+            value=3,
+            step=1,
+        )
+        st.caption(
+            "Variables incluidas: "
+            + ", ".join(DEPENDENT_VARIABLES[:n_dependent_vars])
+        )
+
+    action_columns = st.columns(2)
+    if action_columns[0].button("Conseguir muestra", use_container_width=True, type="primary"):
+        sample_data = generate_sample(n=sample_size, true_effect=true_effect)
+        st.session_state.current_sample = sample_data
+        st.session_state.current_results = run_analysis(
+            sample_data=sample_data,
+            analyze_by_age=analyze_by_age,
+            multiple_variables=multiple_variables,
+            n_dependent_vars=n_dependent_vars,
+        )
+        st.session_state.current_results_config = {
+            "true_effect": true_effect,
+            "sample_size": sample_size,
+            "analyze_by_age": analyze_by_age,
+            "multiple_variables": multiple_variables,
+            "n_dependent_vars": n_dependent_vars,
+        }
+
+    if action_columns[1].button("Limpiar memoria", use_container_width=True):
+        st.session_state.current_sample = None
+        st.session_state.current_results = pd.DataFrame()
+        st.session_state.current_results_config = None
+        st.session_state.replication_results = None
+        st.session_state.replication_config = None
+
+    current_results = st.session_state.current_results
+    current_config = st.session_state.current_results_config or {
+        "true_effect": true_effect,
+        "sample_size": sample_size,
+        "analyze_by_age": analyze_by_age,
+        "multiple_variables": multiple_variables,
+        "n_dependent_vars": n_dependent_vars,
+    }
+
+    if current_results.empty:
+        st.info("Haz clic en `Conseguir muestra` para generar el experimento y ver los resultados.")
+    else:
+        metric_columns = st.columns(3)
+        metric_columns[0].metric("Pruebas realizadas", len(current_results))
+        significant_count = int((current_results["P_Value"] < 0.05).sum())
+        metric_columns[1].metric("P-valores < 0.05", significant_count)
+        metric_columns[2].metric(
+            "Proporción < 0.05",
+            f"{(significant_count / len(current_results)) * 100:.1f}%",
+        )
+
+    st.subheader("Distribución teórica del t-statistic")
+    st.markdown("**Fórmula:** t-statistic = β / error estándar de β")
+    st.caption(current_context_text(current_config))
+
+    if not current_results.empty:
+        st.markdown(
+            build_legend_html(
+                current_results,
+                bool(current_config.get("analyze_by_age", False)),
+            ),
+            unsafe_allow_html=True,
+        )
+
+    st.plotly_chart(
+        build_theoretical_plot(
+            current_results,
+            bool(current_config.get("analyze_by_age", False)),
+        ),
+        use_container_width=True,
+    )
+
+    if not current_results.empty:
+        st.subheader("Resultados de la simulación actual")
+        st.markdown(build_analysis_summary(current_results))
+        st.dataframe(
+            style_results_dataframe(current_results),
+            use_container_width=True,
+        )
+
+
+def render_replication_tab() -> None:
+    controls_column, chart_column = st.columns([1, 1.8], gap="large")
+
+    with controls_column:
+        st.subheader("Estudio de replicación")
+        n_replications = int(
+            st.number_input(
+                "Número de estudios",
+                min_value=50,
+                max_value=2000,
+                value=500,
+                step=50,
+            )
+        )
+        replication_sample_size = int(
+            st.number_input(
+                "Participantes por estudio",
+                min_value=20,
+                max_value=500,
+                value=100,
+                step=10,
+            )
+        )
+        replication_true_effect = float(
+            st.number_input(
+                "Efecto real de la droga",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.0,
+                step=0.1,
+                format="%.1f",
+            )
+        )
+        mode_label = st.radio(
+            "Opciones avanzadas",
+            options=list(REPLICATION_MODES.keys()),
+            help="En la replicación se activa a lo sumo una opción avanzada a la vez.",
+        )
+        mode = REPLICATION_MODES[mode_label]
+
+        replication_n_dependent_vars = 1
+        if mode == "multiple_variables":
+            replication_n_dependent_vars = st.slider(
+                "Número de variables",
+                min_value=2,
+                max_value=5,
+                value=3,
+                step=1,
+            )
+
+        if st.button("Ejecutar meta-estudio", use_container_width=True, type="primary"):
+            progress_bar = st.progress(0.0, text="Preparando meta-estudio...")
+
+            def update_progress(step: int, total: int) -> None:
+                progress_bar.progress(step / total, text=f"Estudio {step} de {total}")
+
+            st.session_state.replication_results = run_replication_study(
+                n_replications=n_replications,
+                sample_size=replication_sample_size,
+                true_effect=replication_true_effect,
+                mode=mode,
+                n_dependent_vars=replication_n_dependent_vars,
+                progress_callback=update_progress,
+            )
+            st.session_state.replication_config = {
+                "n_replications": n_replications,
+                "sample_size": replication_sample_size,
+                "true_effect": replication_true_effect,
+                "mode": mode,
+                "n_dependent_vars": replication_n_dependent_vars,
+            }
+            progress_bar.empty()
+
+    with chart_column:
+        replication_results = st.session_state.replication_results
+        replication_config = st.session_state.replication_config
+
+        if replication_results is None or replication_results.empty or replication_config is None:
+            st.info("Ejecuta el meta-estudio para ver cómo evoluciona la tasa acumulada de rechazos.")
+            return
+
+        final_columns = st.columns(3)
+        final_columns[0].metric(
+            "Estudios corridos",
+            int(replication_results["replication"].max()),
+        )
+        final_columns[1].metric(
+            "Tasa final: todos los datos",
+            f"{replication_results['rejected_todos'].mean():.1%}",
+        )
+
+        mode = str(replication_config["mode"])
+        if mode == "multiple_variables":
+            final_metric = replication_results["rejected_any_var"].mean()
+            final_label = "Tasa final: al menos una variable"
+        elif mode == "age":
+            final_metric = replication_results["rejected_any_subgroup"].mean()
+            final_label = "Tasa final: al menos un subgrupo"
+        else:
+            final_metric = replication_results["rejected_todos"].mean()
+            final_label = "Tasa final: análisis estándar"
+
+        final_columns[2].metric(final_label, f"{final_metric:.1%}")
+        st.plotly_chart(
+            build_replication_plot(
+                replication_results=replication_results,
+                mode=mode,
+                n_dependent_vars=int(replication_config["n_dependent_vars"]),
+                true_effect=float(replication_config["true_effect"]),
+            ),
+            use_container_width=True,
+        )
+        st.caption(
+            build_replication_caption(
+                mode=mode,
+                n_dependent_vars=int(replication_config["n_dependent_vars"]),
+                true_effect=float(replication_config["true_effect"]),
+            )
+        )
+
+
+def main() -> None:
+    st.set_page_config(
+        page_title="TralaleroTralaLex",
+        layout="wide",
+    )
+    inject_styles()
+    initialize_state()
+
+    st.title("Simulador de Inferencia Causal")
+    st.markdown(
+        '<p class="hint-text">Versión Streamlit del simulador original en Shiny, lista para despliegue.</p>',
+        unsafe_allow_html=True,
+    )
+
+    experiment_tab, replication_tab = st.tabs(
+        ["Experimento principal", "Replicación"],
+    )
+
+    with experiment_tab:
+        render_main_tab()
+
+    with replication_tab:
+        render_replication_tab()
+
+
+if __name__ == "__main__":
+    main()
