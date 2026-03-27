@@ -119,18 +119,56 @@ def inject_styles() -> None:
             color: #e2e8f0;
         }
 
-        .hero-card {
-            background: linear-gradient(135deg, #0f766e 0%, #1d4ed8 100%);
-            border-radius: 22px;
-            color: white;
-            padding: 1.6rem 1.8rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+        .main-intro {
+            background: rgba(15, 23, 42, 0.42);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 20px;
+            padding: 1.15rem 1.25rem;
+            margin: 0.35rem 0 1.1rem;
         }
 
-        .hero-card h2 {
-            margin: 0 0 0.6rem 0;
-            color: white;
+        .main-kicker {
+            color: #60a5fa;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            margin-bottom: 0.45rem;
+        }
+
+        .main-intro h2 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 1.9rem;
+            line-height: 1.05;
+        }
+
+        .main-intro p {
+            margin: 0.55rem 0 0;
+            max-width: 56rem;
+            color: #94a3b8;
+            font-size: 0.98rem;
+            line-height: 1.55;
+        }
+
+        .section-heading {
+            margin: 1.5rem 0 0.55rem;
+        }
+
+        .section-heading h3 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 1.7rem;
+            line-height: 1.08;
+        }
+
+        .section-kicker {
+            color: #94a3b8;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 0.35rem;
         }
 
         .legend-wrap {
@@ -652,11 +690,12 @@ def style_results_dataframe(results: pd.DataFrame) -> pd.io.formats.style.Styler
 def render_main_tab() -> None:
     st.markdown(
         """
-        <div class="hero-card">
-          <h2>TralaleroTralaLex: ¿Milagro cognitivo o azar?</h2>
+        <div class="main-intro">
+          <div class="main-kicker">Experimento principal</div>
+          <h2>TralaleroTralaLex</h2>
           <p>
-            Simula un experimento aleatorizado con tratamiento y placebo, calcula pruebas t y
-            observa cómo cambian los p-valores cuando separas por edad o pruebas varias variables.
+            Simula tratamiento versus placebo y observa cómo cambian los t-statistics y los p-valores
+            al modificar el tamaño muestral, los grupos etarios y la cantidad de variables.
           </p>
         </div>
         """,
@@ -767,7 +806,15 @@ def render_main_tab() -> None:
             f"{(significant_count / len(current_results)) * 100:.1f}%",
         )
 
-    st.subheader("Distribución teórica del t-statistic")
+    st.markdown(
+        """
+        <div class="section-heading">
+          <div class="section-kicker">Visualización</div>
+          <h3>Distribución teórica del t-statistic</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown("**Fórmula:** t-statistic = β / error estándar de β")
     st.caption(current_context_text(current_config))
 
@@ -788,7 +835,15 @@ def render_main_tab() -> None:
     )
 
     if not current_results.empty:
-        st.subheader("Resultados de la simulación actual")
+        st.markdown(
+            """
+            <div class="section-heading">
+              <div class="section-kicker">Resultados</div>
+              <h3>Simulación actual</h3>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         st.markdown(build_analysis_summary(current_results))
         st.dataframe(
             style_results_dataframe(current_results),
@@ -943,7 +998,7 @@ def main() -> None:
 
     st.title("Simulador de Inferencia Causal")
     st.markdown(
-        '<p class="hint-text">Versión Streamlit del simulador original en Shiny, lista para despliegue.</p>',
+        '<p class="hint-text">Laboratorio 1.</p>',
         unsafe_allow_html=True,
     )
 
