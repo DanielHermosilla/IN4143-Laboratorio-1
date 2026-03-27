@@ -98,8 +98,9 @@ def inject_styles() -> None:
         button[data-baseweb="tab"] {
             color: #cbd5e1;
             border-radius: 12px;
-            font-size: 0.92rem;
+            font-size: 0.80rem;
             font-weight: 500;
+            padding: 0.35rem 0.75rem;
         }
 
         button[data-baseweb="tab"][aria-selected="true"] {
@@ -171,6 +172,12 @@ def inject_styles() -> None:
         .hint-text {
             color: #94a3b8;
             font-size: 0.95rem;
+        }
+
+        .control-note {
+            color: #94a3b8;
+            font-size: 0.92rem;
+            margin-top: 0.3rem;
         }
         </style>
         """,
@@ -554,7 +561,7 @@ def build_replication_plot(
             x=data["replication"],
             y=data["cumulative_todos"],
             mode="lines",
-            line={"color": "#2563eb", "width": 3},
+            line={"color": "#60a5fa", "width": 3},
             name="Todos los datos",
             hovertemplate="Estudio %{x}<br>Tasa %{y:.1%}<extra></extra>",
         )
@@ -566,7 +573,7 @@ def build_replication_plot(
                 x=data["replication"],
                 y=data["cumulative_any_var"],
                 mode="lines",
-                line={"color": "#16a34a", "width": 3, "dash": "dash"},
+                line={"color": "#34d399", "width": 3, "dash": "dash"},
                 name="Al menos una variable",
                 hovertemplate="Estudio %{x}<br>Tasa %{y:.1%}<extra></extra>",
             )
@@ -578,14 +585,14 @@ def build_replication_plot(
                 x=data["replication"],
                 y=data["cumulative_any_subgroup"],
                 mode="lines",
-                line={"color": "#f97316", "width": 3, "dash": "dash"},
+                line={"color": "#fbbf24", "width": 3, "dash": "dash"},
                 name="Al menos un subgrupo",
                 hovertemplate="Estudio %{x}<br>Tasa %{y:.1%}<extra></extra>",
             )
         )
 
     if true_effect == 0:
-        figure.add_hline(y=0.05, line_color="#dc2626", line_dash="dot", line_width=2)
+        figure.add_hline(y=0.05, line_color="#fb7185", line_dash="dot", line_width=2)
 
     max_y = data["cumulative_todos"].max()
     if mode == "multiple_variables":
@@ -609,8 +616,16 @@ def build_replication_plot(
         },
         margin={"l": 20, "r": 20, "t": 60, "b": 20},
         height=560,
-        paper_bgcolor="rgba(255,255,255,0.0)",
-        plot_bgcolor="rgba(255,255,255,0.72)",
+        font={"color": "#e2e8f0"},
+        paper_bgcolor="#0b1118",
+        plot_bgcolor="#0b1118",
+    )
+    figure.update_xaxes(showgrid=False, color="#e2e8f0")
+    figure.update_yaxes(
+        showgrid=True,
+        gridcolor="rgba(148, 163, 184, 0.16)",
+        zeroline=False,
+        color="#e2e8f0",
     )
 
     return figure
@@ -686,23 +701,25 @@ def render_main_tab() -> None:
             "Se analizan jóvenes, adultos y veteranos por separado."
         )
 
-    multiple_variables = control_columns[3].checkbox(
-        "Probar múltiples variables dependientes",
-        value=False,
-        key="main_multiple_variables",
-    )
     n_dependent_vars = control_columns[3].slider(
-        "Número de variables",
+        "Probar múltiples variables dependientes",
         min_value=2,
         max_value=5,
         value=3,
         step=1,
-        disabled=not multiple_variables,
-        label_visibility="collapsed",
+        disabled=not st.session_state.get("main_multiple_variables", False),
         key="main_n_dependent_vars",
     )
+    multiple_variables = control_columns[3].checkbox(
+        "Activar análisis multivariable",
+        value=False,
+        key="main_multiple_variables",
+    )
     if multiple_variables:
-        control_columns[3].caption(f"Número de variables: {n_dependent_vars}")
+        control_columns[3].markdown(
+            f'<div class="control-note">Número de variables: {n_dependent_vars}</div>',
+            unsafe_allow_html=True,
+        )
         st.caption(
             "Variables incluidas: " + ", ".join(DEPENDENT_VARIABLES[:n_dependent_vars])
         )
